@@ -1,6 +1,8 @@
 // Maple Launcher — dock/launcher de aplicaciones extraido de Caelestia (independiente del shell caelestia)
-// Solo UI: grid de apps + buscador + selector de wallpapers (accion "wallpaper " en el search).
-// Config: ~/.config/caelestia/shell.json (secciones launcher / appearance via Caelestia.Config)
+// Tema: hereda la paleta Material y la transparencia del shell end4-pC instalado
+//   - paleta: ~/.local/state/quickshell/user/generated/material_colors.scss (regenerada por switchwall.sh)
+//   - transparencia: ~/.config/illogical-impulse/config.json -> appearance.transparency
+// Config del launcher en si: ~/.config/caelestia/shell.json (seccion launcher)
 // Uso: qs -c maple-launcher  →  qs -c maple-launcher ipc call launcher toggle
 
 //@ pragma DefaultEnv QS_NO_RELOAD_POPUP=1
@@ -19,6 +21,44 @@ import qs.modules.launcher
 ShellRoot {
     id: root
 
+    // ---- Tema heredado de end4-pC ----
+    readonly property string scssPath: "/home/maple/.local/state/quickshell/user/generated/material_colors.scss"
+    readonly property string end4ConfigPath: "/home/maple/.config/illogical-impulse/config.json"
+
+    property color mtSurface: "#201f20"   // fallback material surfaceContainer
+    property color mtPrimary: "#cbc4cb"   // fallback across end4 default
+    property color mtOnSurface: "#e6e1e1"
+    property real mtBackgroundAlpha: 0.7   // 1 - backgroundTransparency
+
+    FileView {
+        id: scss
+        path: Qt.resolvedUrl(root.scssPath)
+        watchChanges: true
+        onLoadedChanged: {
+            const t = scss.text();
+            const s = t.match(/\$surfaceContainer: ?(#[0-9a-fA-F]{6})/);
+            const p = t.match(/\$primary: ?(#[0-9a-fA-F]{6})/);
+            const o = t.match(/\$onSurface: ?(#[0-9a-fA-F]{6})/);
+            if (s) root.mtSurface = s[1];
+            if (p) root.mtPrimary = p[1];
+            if (o) root.mtOnSurface = o[1];
+        }
+    }
+
+    FileView {
+        id: cfg
+        path: Qt.resolvedUrl(root.end4ConfigPath)
+        onLoadedChanged: {
+            try {
+                const j = JSON.parse(cfg.text());
+                const tr = j.appearance?.transparency;
+                if (tr?.backgroundTransparency != null)
+                    root.mtBackgroundAlpha = 1 - tr.backgroundTransparency;
+            } catch (e) { /* config ausente o invalida: usar fallback */ }
+        }
+    }
+
+    // ---- Estado ----
     IpcHandler {
         id: launcher
         target: "launcher"
@@ -88,22 +128,37 @@ ShellRoot {
             focus: true
             Keys.onEscapePressed: screenState.launcher = false
 
-            anchors.top: parent.top
+            // Dock anclado al borde inferior, centrado
+            anchors.bottom: parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: win.screen.height * 0.12
+            anchors.bottomMargin: 16
 
-            implicitWidth: loader.implicitWidth
+            width: Math.min(900, win.screen.width * 0.75)
             implicitHeight: loader.implicitHeight
+
+            // Panel: fondo heredado de end4 (surfaceContainer + transparencia del theme end4)
+            Rectangle {
+                id: panel
+                anchors.fill: parent
+                color: root.mtSurface
+                opacity: root.mtBackgroundAlpha
+                radius: 18
+                border.color: Qt.alpha(root.mtPrimary, 0.25)
+                border.width: 1
+
+                Behavior on color { ColorAnimation { duration: 250 } }
+            }
 
             Loader {
                 id: loader
 
+                anchors.fill: parent
                 active: screenState.launcher
 
                 sourceComponent: Content {
                     screenState: root.screenState
                     panels: root.dummyPanels
-                    maxHeight: win.screen.height * 0.65
+                    maxHeight: win.screen.height * 0.5
                 }
             }
         }
