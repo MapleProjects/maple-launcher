@@ -1,48 +1,40 @@
 # Maple Launcher
 
-Dock / launcher de aplicaciones para [Quickshell](https://github.com/Quickshell/Quickshell),
-extraido de [Caelestia Shell](https://github.com/caelestia-dots/shell) para funcionar de forma
-**independiente**, sin levantar el shell Caelestia completo (barra, fondos, drawers, lock, etc.).
+Dock / launcher de aplicaciones para [Quickshell](https://github.com/Quickshell/Quickshell), adaptado como componente independiente para Hyprland (sin depender del entorno ni paquete `caelestia-shell-git`).
 
-Aporta:
-- Grid de aplicaciones con buscador.
-- Selector de **wallpapers** en vivo (escribe `wallpaper ` en el buscador).
-- Acciones y calculo integrados (prefijo de accion configurable).
-- Aparece en el monitor con foco (`Hyprland.focusedMonitor`).
+## Características
+
+- Grid de aplicaciones con buscador integrado.
+- Selector dinámico de fondos de pantalla (escribir `wallpaper` en el buscador).
+- Acciones, conversiones y cálculo matemático integrados.
+- Despliegue centrado en el monitor activo enfocado (`Hyprland.focusedMonitor`).
+- Hereda dinámicamente el esquema de colores Material 3 y la transparencia del escritorio activo.
 
 ## Requisitos
 
-- Hyprland
-- `quickshell-git` y `caelestia-shell-git` (AUR)
-  - El launcher depende del plugin nativo `Caelestia` y de los modulos QML de
-    `/etc/xdg/quickshell/caelestia`, que aporta `caelestia-shell-git`.
-  - No se reempaqueta ese codigo aqui; solo se enlaza (`ln -s`) su arbol.
+- **Hyprland** (requiere soporte Wayland LayerShell).
+- **quickshell** (`quickshell-git`).
+- Soporte para componentes QML Caelestia en `/usr/lib/qt6/qml/Caelestia`.
 
-## Instalacion
+## Instalación
 
 ```bash
 git clone https://github.com/MapleProjects/maple-launcher
 cd maple-launcher
+chmod +x install.sh
 ./install.sh
 ```
 
-El instalador crea `~/.config/quickshell/maple-launcher/`, enlaza los directorios
-compartidos de Caelestia y registra la unidad systemd de usuario `maple-launcher.service`
-(autoinicio con la sesion grafica).
+El script copia los módulos autónomos a `~/.config/quickshell/maple-launcher/` y registra la unidad systemd de usuario `maple-launcher.service`.
 
 ## Uso
 
 ```bash
-qs -c maple-launcher ipc call launcher toggle   # abrir/cerrar
+qs -c maple-launcher ipc call launcher toggle
 ```
 
-En Hyprland (config Lua):
+En la configuración de Hyprland (`custom/keybinds.lua`):
 
 ```lua
-hl.bind("SUPER + D", hl.dsp.exec_cmd("qs -c maple-launcher ipc call launcher toggle"))
+hl.bind("SUPER + D", hl.dsp.exec_cmd("systemctl --user start maple-launcher.service; qs -c maple-launcher ipc call launcher toggle"))
 ```
-
-## Configuracion
-
-El launcher lee `~/.config/caelestia/shell.json` (secciones `launcher` y `appearance`)
-a traves de `Caelestia.Config`, igual que el shell original.

@@ -1,36 +1,34 @@
 #!/usr/bin/env bash
-# Maple Launcher — dock/launcher de aplicaciones para Quickshell, extraido de Caelestia
-# Instala el launcher independiente (sin el shell Caelestia completo).
+# Maple Launcher — dock/launcher de aplicaciones para Quickshell
+# Instalación autónoma e independiente (sin requerir el paquete caelestia-shell-git).
 #
 # Requisitos:
-#   - quickshell-git y caelestia-shell-git instalados (aportan el plugin nativo Caelestia
-#     y los modulos QML de /etc/xdg/quickshell/caelestia de los que depende el launcher).
-#   - Hyprland (usa WlrLayershell + Hyprland API).
+#   - quickshell (quickshell-git)
+#   - Hyprland (usa WlrLayershell + Hyprland API)
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET="$HOME/.config/quickshell/maple-launcher"
-CAELESTIA="${CAELESTIA:-/etc/xdg/quickshell/caelestia}"
 
-# Directorios del arbol de Caelestia que se enlazan (el launcher los consume via imports qs.*)
-LINKDIRS=(assets components modules services utils)
+# Directorios empaquetados autónomos (el launcher los consume mediante imports qs.*)
+DIRS=(assets components modules services utils)
 
 mkdir -p "$TARGET"
-cp shell.qml "$TARGET/shell.qml"
+cp -f "$SCRIPT_DIR/shell.qml" "$TARGET/shell.qml"
 
-for d in "${LINKDIRS[@]}"; do
-  if [ ! -d "$CAELESTIA/$d" ]; then
-    echo "AVISO: falta $CAELESTIA/$d. Instala caelestia-shell-git." >&2
-    continue
+for d in "${DIRS[@]}"; do
+  if [ -d "$SCRIPT_DIR/$d" ]; then
+    rm -rf "$TARGET/$d"
+    cp -r "$SCRIPT_DIR/$d" "$TARGET/$d"
   fi
-  ln -sfn "$CAELESTIA/$d" "$TARGET/$d"
 done
 
-# Unidad systemd de usuario (autoinicio en la sesion grafica)
+# Unidad systemd de usuario (autoinicio en la sesión gráfica)
 UNIT="$HOME/.config/systemd/user/maple-launcher.service"
 mkdir -p "$(dirname "$UNIT")"
 cat > "$UNIT" <<'EOF'
 [Unit]
-Description=Maple Launcher (quickshell)
+Description=Maple Launcher (quickshell, independiente)
 After=graphical-session.target
 PartOf=graphical-session.target
 
@@ -42,11 +40,12 @@ RestartSec=2
 [Install]
 WantedBy=graphical-session.target
 EOF
+
 systemctl --user daemon-reload
 systemctl --user enable --now maple-launcher.service 2>/dev/null || true
 
 echo
-echo "Instalado en $TARGET"
-echo "  - Abrir:  qs -c maple-launcher ipc call launcher toggle"
-echo "  - Bind en Hyprland (ejemplo en hyprland.lua):"
-echo "      hl.bind(\"SUPER + D\", hl.dsp.exec_cmd(\"qs -c maple-launcher ipc call launcher toggle\"))"
+echo "Instalado con éxito en $TARGET (independiente de Caelestia Shell)"
+echo "  - Abrir/Alternar: qs -c maple-launcher ipc call launcher toggle"
+echo "  - Atajo en Hyprland (ejemplo en custom/keybinds.lua):"
+echo "      hl.bind(\"SUPER + D\", hl.dsp.exec_cmd(\"systemctl --user start maple-launcher.service; qs -c maple-launcher ipc call launcher toggle\"))"
