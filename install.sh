@@ -26,14 +26,22 @@ done
 # Unidad systemd de usuario (autoinicio en la sesión gráfica)
 UNIT="$HOME/.config/systemd/user/maple-launcher.service"
 mkdir -p "$(dirname "$UNIT")"
-cat > "$UNIT" <<'EOF'
+
+EXEC_PREFIX=""
+if [ -x "$HOME/.local/bin/intel-run" ]; then
+  EXEC_PREFIX="$HOME/.local/bin/intel-run "
+elif command -v intel-run &>/dev/null; then
+  EXEC_PREFIX="intel-run "
+fi
+
+cat > "$UNIT" <<EOF
 [Unit]
 Description=Maple Launcher (quickshell, independiente)
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
-ExecStart=/usr/bin/qs -c maple-launcher
+ExecStart=${EXEC_PREFIX}/usr/bin/qs -c maple-launcher
 Restart=on-failure
 RestartSec=2
 
